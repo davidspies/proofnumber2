@@ -1,7 +1,6 @@
 module ProofNumber.Solve.Class
   ( MonadSolveGame(..)
   , Node
-  , maximumOn
   , solve
   )
 where
@@ -129,7 +128,3 @@ recompute s = do
   (myPerspective, descendants) <- getPerspectiveAndDescendants s
   rs                           <- mapM lookupDefaultedState descendants
   writeState s (combineResults myPerspective rs)
-
-maximumOn :: Ord b => (a -> b) -> [a] -> a
-maximumOn fn =
-  fst . maximumBy (\x y -> compare (snd x) (snd y)) . map (id &&& fn)
