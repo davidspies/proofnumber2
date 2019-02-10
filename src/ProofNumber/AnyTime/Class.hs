@@ -43,6 +43,8 @@ instance MonadHasFinished (StateT s) where
   extractFinished ((v, b), s) = ((v, s), b)
 instance MonadHasFinished LoggingT where
   extractFinished = id
+instance MonadHasFinished NoLoggingT where
+  extractFinished = id
 
 deriving via Transformed (ReaderT r) m instance MonadAnyTime m
   => MonadAnyTime (ReaderT r m)
@@ -54,3 +56,5 @@ deriving via Transformed (StateT s) m instance (MonadAnyTime m)
   => MonadAnyTime (StateT s m)
 deriving via Transformed LoggingT m instance (MonadAnyTime m)
   => MonadAnyTime (LoggingT m)
+deriving via Transformed NoLoggingT m instance (MonadAnyTime m)
+  => MonadAnyTime (NoLoggingT m)
