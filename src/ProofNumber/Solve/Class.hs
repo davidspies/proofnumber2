@@ -93,12 +93,8 @@ expand s = lookupState s >>= \case
   Nothing          -> recompute s
   Just Finished{}  -> return ()
   Just Remaining{} -> do
-    g    <- askGame
-    self <- askSelf
-    let currentTurn   = turn g s
-        myPerspective = if currentTurn == self then Self else Other
-        descendants   = map (\m -> makeMove g m s) (availableMoves g s)
-    chosen <- minimumOnM
+    (myPerspective, descendants) <- getPerspectiveAndDescendants s
+    chosen                       <- minimumOnM
       (fmap (proofCost myPerspective) . lookupDefaultedState)
       descendants
     expand chosen
@@ -118,14 +114,20 @@ combineResults p ns = makeNode p pCost oppCost
   pCost   = minimum $ map (proofCost p) ns
   oppCost = sum $ map (proofCost (opposite p)) ns
 
-recompute :: MonadSolveGame m => State (Game m) -> m ()
-recompute s = do
+getPerspectiveAndDescendants
+  :: MonadSolveGame m => State (Game m) -> m (Perspective, [State (Game m)])
+getPerspectiveAndDescendants s = do
   g    <- askGame
   self <- askSelf
   let currentTurn   = turn g s
       myPerspective = if currentTurn == self then Self else Other
       descendants   = map (\m -> makeMove g m s) (availableMoves g s)
-  rs <- mapM lookupDefaultedState descendants
+  return (myPerspective, descendants)
+
+recompute :: MonadSolveGame m => State (Game m) -> m ()
+recompute s = do
+  (myPerspective, descendants) <- getPerspectiveAndDescendants s
+  rs                           <- mapM lookupDefaultedState descendants
   writeState s (combineResults myPerspective rs)
 
 maximumOn :: Ord b => (a -> b) -> [a] -> a
