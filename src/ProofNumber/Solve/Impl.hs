@@ -15,6 +15,7 @@ import qualified Data.Map                      as Map
 
 import           ProofNumber.Game
 import           ProofNumber.Solve.Class
+import           ProofNumber.Solve.Node
 
 newtype Solver g a = Solver (ReaderT (Env g) (LoggingT IO) a)
   deriving ( Functor, Applicative, Monad, MonadIO, MonadLogger

@@ -4,8 +4,7 @@ import           DSpies.Prelude
 
 import           Control.Monad.Logger          as Logger
 
-import           ProofNumber.Solve.Class
-import           ProofNumber.Solve.Impl
+import           ProofNumber.Solve
 import qualified ProofNumber.TicTacToe         as TicTacToe
 
 main :: IO ()
