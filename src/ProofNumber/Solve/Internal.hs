@@ -28,8 +28,15 @@ lookupDefaultedState :: MonadSolveGame m => State (Game m) -> m Node
 lookupDefaultedState s = do
   g <- askGame
   case status g s of
-    Nothing -> fromMaybe (Remaining (Costs 1 1)) <$> lookupState s
-    Just r  -> do
+    Nothing -> lookupState s >>= \case
+      Nothing -> do
+        selfProb <- heuristic s
+        return $ Remaining $ Costs { selfCost   = recip selfProb - 1
+                                   , othersCost = recip (1 - selfProb) - 1
+                                   , selfProb
+                                   }
+      Just r -> return r
+    Just r -> do
       self    <- askSelf
       desired <- askDesired
       return $ Finished $ outcome g self r >= desired

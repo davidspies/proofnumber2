@@ -13,7 +13,11 @@ import           ProofNumber.Infinible
 
 data Node = Finished Bool | Remaining Costs
 
-data Costs = Costs {selfCost :: Integer, othersCost :: Integer}
+data Costs = Costs
+  { selfCost :: Double
+  , othersCost :: Double
+  , selfProb :: Double
+  }
 
 data Perspective = Self | Other
 
@@ -22,15 +26,18 @@ opposite = \case
   Self  -> Other
   Other -> Self
 
-makeNode :: Perspective -> Infinible Integer -> Infinible Integer -> Node
-makeNode Self  Infinity            _                   = Finished False
-makeNode Self  _                   Infinity            = Finished True
-makeNode Other Infinity            _                   = Finished True
-makeNode Other _                   Infinity            = Finished False
-makeNode Self  (Finite selfCost  ) (Finite othersCost) = Remaining Costs { .. }
-makeNode Other (Finite othersCost) (Finite selfCost  ) = Remaining Costs { .. }
+makeNode
+  :: Perspective -> Infinible Double -> Infinible Double -> Double -> Node
+makeNode Self  Infinity _        _ = Finished False
+makeNode Self  _        Infinity _ = Finished True
+makeNode Other Infinity _        _ = Finished True
+makeNode Other _        Infinity _ = Finished False
+makeNode Self (Finite selfCost) (Finite othersCost) selfProb =
+  Remaining Costs { .. }
+makeNode Other (Finite othersCost) (Finite selfCost) oppProb =
+  Remaining Costs { selfProb = 1 - oppProb, .. }
 
-proofCost :: Perspective -> Node -> Infinible Integer
+proofCost :: Perspective -> Node -> Infinible Double
 proofCost = \case
   Self -> \case
     Finished  False              -> Infinity
@@ -41,8 +48,20 @@ proofCost = \case
     Finished  True                 -> Infinity
     Remaining Costs { othersCost } -> Finite othersCost
 
+proofProb :: Perspective -> Node -> Double
+proofProb = \case
+  Self  -> nodeSelfProb
+  Other -> (1 -) . nodeSelfProb
+
+nodeSelfProb :: Node -> Double
+nodeSelfProb = \case
+  Finished  False              -> 0
+  Finished  True               -> 1
+  Remaining Costs { selfProb } -> selfProb
+
 combineResults :: Perspective -> [Node] -> Node
-combineResults p ns = makeNode p pCost oppCost
+combineResults p ns = makeNode p pCost oppCost pProb
  where
   pCost   = minimum $ map (proofCost p) ns
   oppCost = sum $ map (proofCost (opposite p)) ns
+  pProb   = maximum $ map (proofProb p) ns

@@ -18,6 +18,9 @@ class StoreState m where
   lookupState :: Stored m -> m (Maybe Node)
   writeState :: Stored m -> Node -> m ()
 
+class ReadSolver m => HasHeuristic m where
+  heuristic :: State (Game m) -> m Double
+
 type MonadSolveGame m
   = ( MonadLogger m
   , ReadSolver m
@@ -25,4 +28,5 @@ type MonadSolveGame m
   , Show (State (Game m))
   , StoreState m
   , Stored m ~ State (Game m)
+  , HasHeuristic m
   )

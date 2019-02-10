@@ -43,6 +43,9 @@ instance Ord (State g) => StoreState (Solver g) where
     ref <- Reader.asks posMap
     liftIO $ modifyIORef ref (Map.insert s r)
 
+instance IsGame g => HasHeuristic (Solver g) where
+  heuristic _ = return 0.5
+
 runSolver
   :: forall g a . LogLevel -> g -> Player g -> Outcome g -> Solver g a -> IO a
 runSolver minLogLevel game player objective (Solver act) = do
