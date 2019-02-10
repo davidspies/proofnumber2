@@ -29,13 +29,14 @@ data Env g = Env
   , posMap :: IORef (Map (State g) Node)
   }
 
-instance (IsGame g, Eq (Player g), Ord (State g), Show (State g))
-    => MonadSolveGame (Solver g) where
+instance IsGame g => ReadSolver (Solver g) where
   type Game (Solver g) = g
-
   askGame    = Reader.asks game
   askSelf    = Reader.asks player
   askDesired = Reader.asks objective
+
+instance Ord (State g) => StoreState (Solver g) where
+  type Stored (Solver g) = State g
   lookupState s =
     fmap (Map.lookup s) . liftIO . readIORef =<< Reader.asks posMap
   writeState s r = do
