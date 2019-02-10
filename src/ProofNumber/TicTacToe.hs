@@ -19,21 +19,36 @@ data Piece = X | O
 data Position = Position {row :: Int, col :: Int}
   deriving (Eq, Ord, Show)
 
-data State = State
+data StateKernel = StateKernel
   { board :: Map Position Piece
   , turn :: Piece
-  , nextMoves :: [Position]
   }
   deriving (Eq, Ord, Show)
+
+data State = State
+  { kernel :: StateKernel
+  , nextMoves :: [Position]
+  }
+
+instance Eq State where
+  (==) x y = kernel x == kernel y
+instance Ord State where
+  compare x y = compare (kernel x) (kernel y)
+instance Show State where
+  showsPrec d State {..} =
+    showParen (d > 10) $ showString "state g " . showsPrec 11 kernel
+
+state :: Game -> StateKernel -> State
+state g kernel@StateKernel { board } = State
+  { kernel
+  , nextMoves = [ p | p <- positions g, not $ p `Map.member` board ]
+  }
 
 data Game = Game {nrows :: Int, ncols :: Int, inARow :: Int}
 
 positions :: Game -> [Position]
 positions Game {..} =
   [ Position { .. } | row <- [1 .. nrows], col <- [1 .. ncols] ]
-
-getNextMoves :: Game -> Map Position Piece -> [Position]
-getNextMoves g board = [ p | p <- positions g, not $ p `Map.member` board ]
 
 newtype GameResult = GameResult {winner :: Maybe Piece}
   deriving (Show)
@@ -54,8 +69,7 @@ oppositePlayer = \case
 
 emptyState :: Game -> State
 emptyState g =
-  let board = Map.empty
-  in  State { board, turn = X, nextMoves = getNextMoves g board }
+  let board = Map.empty in state g StateKernel { board, turn = X }
 
 instance IsGame Game where
   type State Game = State
@@ -64,12 +78,9 @@ instance IsGame Game where
   type Move Game = Position
   type Player Game = Piece
 
-  makeMove g p State {..} =
-    let newBoard = Map.insert p turn board
-    in  State { board     = newBoard
-              , turn      = oppositePlayer turn
-              , nextMoves = getNextMoves g newBoard
-              }
+  makeMove g p State { kernel = StateKernel {..} } = state
+    g
+    StateKernel { board = Map.insert p turn board, turn = oppositePlayer turn }
 
   outcome _ _ (GameResult Nothing) = Tie
   outcome _ p (GameResult (Just q)) | p == q    = Win
@@ -77,9 +88,9 @@ instance IsGame Game where
 
   availableMoves _ = nextMoves
 
-  turn _ State { turn } = turn
+  turn _ State { kernel = StateKernel { turn } } = turn
 
-  status Game {..} s@State { board } = case winner of
+  status Game {..} s@State { kernel = StateKernel { board } } = case winner of
     Just _                       -> Just $ GameResult { winner }
     Nothing | null (nextMoves s) -> Just $ GameResult { winner }
     Nothing                      -> Nothing
