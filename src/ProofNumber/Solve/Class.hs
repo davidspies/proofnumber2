@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module ProofNumber.Solve.Class
   ( MonadSolveGame(..)
   , Node
@@ -7,13 +9,22 @@ where
 
 import           DSpies.Prelude          hiding ( State )
 
+import           Control.Monad.Logger
+import qualified Data.Text                     as Text
+
 import           ProofNumber.Game
 
 data Node = Finished Bool | Remaining Costs
 
 data Costs = Costs {selfCost :: Integer, othersCost :: Integer}
 
-class (IsGame (Game m), Eq (Player (Game m)), Monad m) => MonadSolveGame m where
+class
+    ( IsGame (Game m)
+    , Eq (Player (Game m))
+    , Monad m
+    , MonadLogger m
+    , Show (State (Game m))
+    ) => MonadSolveGame m where
   type Game m
   askSelf :: m (Player (Game m))
   askGame :: m (Game m)
@@ -89,7 +100,9 @@ minimumOnM fn xs =
 
 expand :: MonadSolveGame m => State (Game m) -> m ()
 expand s = lookupState s >>= \case
-  Nothing          -> recompute s
+  Nothing -> do
+    $logDebug $ Text.unwords ["Exploring", Text.pack $ show s]
+    recompute s
   Just Finished{}  -> return ()
   Just Remaining{} -> do
     (myPerspective, descendants) <- getPerspectiveAndDescendants s
