@@ -1,8 +1,8 @@
 module ProofNumber.TicTacToe
   ( Game(..)
-  , Piece
-  , Position
-  , State
+  , Outcome(..)
+  , Piece(..)
+  , Position(..)
   , emptyState
   )
 where
