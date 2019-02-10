@@ -77,7 +77,6 @@ instance IsGame Game where
 
   availableMoves _ = nextMoves
 
-
   turn _ State { turn } = turn
 
   status Game {..} s@State { board } = case winner of
