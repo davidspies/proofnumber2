@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module ProofNumber.Solve.Internal
-  ( solve
+  ( Analysis(..)
+  , solve
   )
 where
 
@@ -10,19 +11,28 @@ import           DSpies.Prelude          hiding ( State )
 import           Control.Monad.Logger
 import qualified Data.Text                     as Text
 
+import           ProofNumber.AnyTime.Class
 import           ProofNumber.Game
 import           ProofNumber.Minimum
 import           ProofNumber.Solve.Class
 import           ProofNumber.Solve.Node
 
-solve :: forall m . MonadSolveGame m => State (Game m) -> m Bool
-solve s0 = do
-  let go = lookupDefaultedState s0 >>= \case
-        Finished b  -> return b
-        Remaining{} -> do
-          expand s0
-          go
-  go
+newtype Analysis move = Analysis
+  { value :: Double
+  }
+  deriving (Show)
+
+solve
+  :: (MonadSolveGame m, MonadAnyTime m)
+  => Event m
+  -> State (Game m)
+  -> m (Analysis (Move (Game m)))
+solve e s0 = runUntilCancelled e $ do
+  expand s0
+  lookupDefaultedState s0 >>= \case
+    Finished b -> return (Analysis { value = if b then 1 else 0 }, True)
+    Remaining Costs { selfProb } ->
+      return (Analysis { value = selfProb }, False)
 
 lookupDefaultedState :: MonadSolveGame m => State (Game m) -> m Node
 lookupDefaultedState s = do

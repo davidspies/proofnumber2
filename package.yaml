@@ -24,9 +24,11 @@ dependencies:
 - base >= 4.7 && < 5
 - dspies-prelude
 - containers
+- monad-control
 - monad-logger
 - mtl
 - text
+- unliftio
 
 ghc-options:
 - -Werror

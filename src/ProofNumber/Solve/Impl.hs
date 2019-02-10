@@ -12,14 +12,16 @@ import           Control.Monad.Logger
 import qualified Control.Monad.Reader          as Reader
 import           Data.IORef
 import qualified Data.Map                      as Map
+import           UnliftIO                       ( MonadUnliftIO )
 
+import           ProofNumber.AnyTime
 import           ProofNumber.Game
 import           ProofNumber.Solve.Class
 import           ProofNumber.Solve.Node
 
-newtype Solver g a = Solver (ReaderT (Env g) (LoggingT IO) a)
-  deriving ( Functor, Applicative, Monad, MonadIO, MonadLogger
-           , MonadReader (Env g)
+newtype Solver g a = Solver (ReaderT (Env g) (LoggingT (AnyTimeT IO)) a)
+  deriving ( Functor, Applicative, Monad, MonadIO, MonadLogger, MonadAnyTime
+           , MonadUnliftIO, MonadReader (Env g)
            )
 
 data Env g = Env
@@ -50,6 +52,7 @@ runSolver
   :: forall g a . LogLevel -> g -> Player g -> Outcome g -> Solver g a -> IO a
 runSolver minLogLevel game player objective (Solver act) = do
   posMap <- newIORef Map.empty
-  runStderrLoggingT $ filterLogger (\_ ll -> ll >= minLogLevel) $ runReaderT
-    act
-    Env { .. }
+  runAnyTimeT
+    $ runStderrLoggingT
+    $ filterLogger (\_ ll -> ll >= minLogLevel)
+    $ runReaderT act Env { .. }
