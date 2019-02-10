@@ -13,7 +13,7 @@ main :: IO ()
 main = do
   let game = TicTacToe.Game 3 3 3
   res <-
-    runSolver Logger.LevelInfo game X Win
+    runSolver Logger.LevelInfo game X Tie
     $ withAsync (liftIO $ threadDelay 1000000)
     $ \e -> solve e (TicTacToe.emptyState game)
   print res

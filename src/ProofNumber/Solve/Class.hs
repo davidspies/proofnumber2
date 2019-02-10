@@ -25,6 +25,7 @@ type MonadSolveGame m
   = ( MonadLogger m
   , ReadSolver m
   , Eq (Player (Game m))
+  , Ord (Move (Game m))
   , Show (State (Game m))
   , StoreState m
   , Stored m ~ State (Game m)

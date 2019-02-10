@@ -9,6 +9,7 @@ where
 import           DSpies.Prelude          hiding ( State )
 
 import           Control.Monad.Logger
+import qualified Data.Map                      as Map
 import qualified Data.Text                     as Text
 
 import           ProofNumber.AnyTime.Class
@@ -17,8 +18,11 @@ import           ProofNumber.Minimum
 import           ProofNumber.Solve.Class
 import           ProofNumber.Solve.Node
 
-newtype Analysis move = Analysis
+type ChildMap move = Map move Double
+
+data Analysis move = Analysis
   { value :: Double
+  , children :: ChildMap move
   }
   deriving (Show)
 
@@ -30,9 +34,24 @@ solve
 solve e s0 = runUntilCancelled e $ do
   expand s0
   lookupDefaultedState s0 >>= \case
-    Finished b -> return (Analysis { value = if b then 1 else 0 }, True)
-    Remaining Costs { selfProb } ->
-      return (Analysis { value = selfProb }, False)
+    Finished b -> do
+      children <- lookupChildren s0
+      return (Analysis { value = if b then 1 else 0, children }, True)
+    Remaining Costs { selfProb } -> do
+      children <- lookupChildren s0
+      return (Analysis { value = selfProb, children }, False)
+
+lookupChildren
+  :: MonadSolveGame m => State (Game m) -> m (ChildMap (Move (Game m)))
+lookupChildren s = do
+  g <- askGame
+  fmap Map.fromList $ forM (availableMoves g s) $ \m ->
+    (m, ) <$> lookupStateProb (makeMove g m s)
+
+lookupStateProb :: MonadSolveGame m => State (Game m) -> m Double
+lookupStateProb s = lookupDefaultedState s <&> \case
+  Finished  b                  -> if b then 1 else 0
+  Remaining Costs { selfProb } -> selfProb
 
 lookupDefaultedState :: MonadSolveGame m => State (Game m) -> m Node
 lookupDefaultedState s = do
