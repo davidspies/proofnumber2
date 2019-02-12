@@ -10,7 +10,6 @@ where
 import           DSpies.Prelude
 
 import           Control.Monad.Logger
-import           Control.Monad.Reader
 import           Control.Monad.Trans.Control
 
 type IsFinished = Bool
