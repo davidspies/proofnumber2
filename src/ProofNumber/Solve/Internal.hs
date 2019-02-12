@@ -9,7 +9,6 @@ where
 import           DSpies.Prelude          hiding ( State )
 
 import           Control.Monad.Logger
-import qualified Data.Map                      as Map
 import qualified Data.Text                     as Text
 
 import           ProofNumber.AnyTime.Class
@@ -18,7 +17,7 @@ import           ProofNumber.Minimum
 import           ProofNumber.Solve.Class
 import           ProofNumber.Solve.Node
 
-type ChildMap move = Map move Double
+type ChildMap move = [(move, Double)]
 
 data Analysis move = Analysis
   { value :: Double
@@ -45,8 +44,7 @@ lookupChildren
   :: MonadSolveGame m => State (Game m) -> m (ChildMap (Move (Game m)))
 lookupChildren s = do
   g <- askGame
-  fmap Map.fromList $ forM (availableMoves g s) $ \m ->
-    (m, ) <$> lookupStateProb (makeMove g m s)
+  forM (availableMoves g s) $ \m -> (m, ) <$> lookupStateProb (makeMove g m s)
 
 lookupStateProb :: MonadSolveGame m => State (Game m) -> m Double
 lookupStateProb s = lookupDefaultedState s <&> \case
