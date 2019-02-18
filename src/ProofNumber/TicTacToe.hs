@@ -1,9 +1,9 @@
 module ProofNumber.TicTacToe
-  ( Game(..)
+  ( Dimensions(..)
+  , Game(..)
   , GameResult
   , Outcome(..)
   , Piece(..)
-  , Position(..)
   , State
   , emptyState
   )
@@ -11,18 +11,12 @@ where
 
 import           DSpies.Prelude          hiding ( State )
 
-import qualified Data.Map                      as Map
-
 import           ProofNumber.Game               ( IsGame )
 import qualified ProofNumber.Game              as Game
-
-data Piece = X | O
-  deriving (Eq, Ord, Show)
-data Position = Position {row :: Int, col :: Int}
-  deriving (Eq, Ord, Show)
+import           ProofNumber.TicTacToe.Board   as Board
 
 data StateKernel = StateKernel
-  { board :: Map Position Piece
+  { board :: Board
   , turn :: Piece
   }
   deriving (Eq, Ord, Show)
@@ -43,14 +37,10 @@ instance Show State where
 state :: Game -> StateKernel -> State
 state g kernel@StateKernel { board } = State
   { kernel
-  , nextMoves = [ p | p <- positions g, not $ p `Map.member` board ]
+  , nextMoves = [ p | p <- positions (dims g), not $ Board.member p board ]
   }
 
-data Game = Game {nrows :: Int, ncols :: Int, inARow :: Int}
-
-positions :: Game -> [Position]
-positions Game {..} =
-  [ Position { .. } | row <- [1 .. nrows], col <- [1 .. ncols] ]
+data Game = Game {dims :: Dimensions, inARow :: Int}
 
 newtype GameResult = GameResult {winner :: Maybe Piece}
   deriving (Show)
@@ -71,7 +61,7 @@ oppositePlayer = \case
 
 emptyState :: Game -> State
 emptyState g =
-  let board = Map.empty in state g StateKernel { board, turn = X }
+  let board = Board.empty (dims g) in state g StateKernel { board, turn = X }
 
 instance IsGame Game where
   type State Game = State
@@ -82,7 +72,9 @@ instance IsGame Game where
 
   makeMove g p State { kernel = StateKernel {..} } = state
     g
-    StateKernel { board = Map.insert p turn board, turn = oppositePlayer turn }
+    StateKernel { board = Board.insert p turn board
+                , turn  = oppositePlayer turn
+                }
 
   outcome _ _ (GameResult Nothing) = Tie
   outcome _ p (GameResult (Just q)) | p == q    = Win
@@ -92,20 +84,21 @@ instance IsGame Game where
 
   turn _ State { kernel = StateKernel { turn } } = turn
 
-  status Game {..} s@State { kernel = StateKernel { board } } = case winner of
-    Just _                       -> Just $ GameResult { winner }
-    Nothing | null (nextMoves s) -> Just $ GameResult { winner }
-    Nothing                      -> Nothing
+  status Game { dims = dims@Dimensions {..}, inARow } s@State { kernel = StateKernel { board } }
+    = case winner of
+      Just _                       -> Just $ GameResult { winner }
+      Nothing | null (nextMoves s) -> Just $ GameResult { winner }
+      Nothing                      -> Nothing
    where
-    allSamePiece ps = allSameJust $ map (`Map.lookup` board) ps
-    eastWinAt r0 c0 = allSamePiece
-      [ Position { row = r0, col = c0 + d } | d <- [0 .. inARow - 1] ]
-    southWinAt r0 c0 = allSamePiece
-      [ Position { row = r0 + d, col = c0 } | d <- [0 .. inARow - 1] ]
-    southEastWinAt r0 c0 = allSamePiece
-      [ Position { row = r0 + d, col = c0 + d } | d <- [0 .. inARow - 1] ]
-    southWestWinAt r0 c0 = allSamePiece
-      [ Position { row = r0 - d, col = c0 + d } | d <- [0 .. inARow - 1] ]
+    allSamePiece ps = allSameJust $ map (\x -> Board.lookup x board) ps
+    eastWinAt r0 c0 =
+      allSamePiece [ mkPos dims r0 (c0 + d) | d <- [0 .. inARow - 1] ]
+    southWinAt r0 c0 =
+      allSamePiece [ mkPos dims (r0 + d) c0 | d <- [0 .. inARow - 1] ]
+    southEastWinAt r0 c0 =
+      allSamePiece [ mkPos dims (r0 + d) (c0 + d) | d <- [0 .. inARow - 1] ]
+    southWestWinAt r0 c0 =
+      allSamePiece [ mkPos dims (r0 - d) (c0 + d) | d <- [0 .. inARow - 1] ]
     winner =
       listToMaybe
         $  catMaybes
