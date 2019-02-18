@@ -4,6 +4,7 @@
 module ProofNumber.AnyTime.Class
   ( IsFinished
   , MonadAnyTime(..)
+  , runUntilCancelledAndFinalize
   )
 where
 
@@ -57,3 +58,7 @@ deriving via Transformed LoggingT m instance (MonadAnyTime m)
   => MonadAnyTime (LoggingT m)
 deriving via Transformed NoLoggingT m instance (MonadAnyTime m)
   => MonadAnyTime (NoLoggingT m)
+
+runUntilCancelledAndFinalize
+  :: MonadAnyTime m => Event m -> m (m a, IsFinished) -> m a
+runUntilCancelledAndFinalize = join .: runUntilCancelled

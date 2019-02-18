@@ -30,15 +30,21 @@ solve
   => Event m
   -> State (Game m)
   -> m (Analysis (Move (Game m)))
-solve e s0 = runUntilCancelled e $ do
+solve e s0 = runUntilCancelledAndFinalize e $ do
   expand s0
-  lookupDefaultedState s0 >>= \case
-    Finished b -> do
-      children <- lookupChildren s0
-      return (Analysis { value = if b then 1 else 0, children }, True)
-    Remaining Costs { selfProb } -> do
-      children <- lookupChildren s0
-      return (Analysis { value = selfProb, children }, False)
+  lookupDefaultedState s0 <&> \case
+    Finished b ->
+      ( do
+        children <- lookupChildren s0
+        return Analysis { value = if b then 1 else 0, children }
+      , True
+      )
+    Remaining Costs { selfProb } ->
+      ( do
+        children <- lookupChildren s0
+        return Analysis { value = selfProb, children }
+      , False
+      )
 
 lookupChildren
   :: MonadSolveGame m => State (Game m) -> m (ChildMap (Move (Game m)))
@@ -58,8 +64,8 @@ lookupDefaultedState s = do
     Nothing -> lookupState s >>= \case
       Nothing -> do
         selfProb <- heuristic s
-        return $ Remaining $ Costs { selfCost   = recip selfProb - 1
-                                   , othersCost = recip (1 - selfProb) - 1
+        return $ Remaining $ Costs { selfCost   = -(log selfProb)
+                                   , othersCost = -(log (1 - selfProb))
                                    , selfProb
                                    }
       Just r -> return r
